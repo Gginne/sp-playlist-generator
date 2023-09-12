@@ -1,0 +1,8 @@
+.prompt-input{
+    background: "#212121";
+    font-size: "24px";
+    color: "white";
+    border: "1px solid #666";
+    border-radius: "10px";
+    box-shadow: "0 0 5px rgba(0, 0, 0, 0.2)";
+}
