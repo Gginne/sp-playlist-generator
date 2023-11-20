@@ -1,25 +1,28 @@
 import axios from "axios";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 export default function useRequest(endpoint) {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState(n)
+    const [error, setError] = useState(null)
 
-
-  
-    const doRequest = useCallback(async (body) => {
+    const request = useCallback(async (body) => {
       try {
         setLoading(true)
         const response = await axios.post(endpoint, body);
         setData(response.data)
-        console.log(response)
+  
       } catch (error) {
         setError(error)
       } finally {
         setLoading(false)
       }
-    }, [options]);
+    }, [endpoint]);
+
+    const clear = useCallback(() => {
+      setData(null)
+      setError(null)
+    }, [])
   
-    return { doRequest, data, loading, error };
+    return { request, clear, data, loading, error };
   }

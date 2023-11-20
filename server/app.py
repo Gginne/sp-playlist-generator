@@ -7,7 +7,7 @@ from dotenv import dotenv_values
 import json
 
 config = dotenv_values('.env')
-openai.api_key  = config["OPENAI_KEY"]
+openai.api_key  = config["OPENAI_API_KEY"]
 
 app = Flask(__name__)
 
@@ -25,32 +25,59 @@ CORS(app)
 track_ids = []
 assert current_user is not None
 
+@app.route('/login', methods=["POST"])
+@cross_origin()
+def login():
+    code = request.json.get("code")
+   
+    token_info = sp.auth_manager.get_access_token(code)
+    print(token_info)
+    if "access_token" in token_info and "refresh_token" in token_info:
+        access_token = token_info["access_token"]
+        refresh_token = token_info["refresh_token"]
+        expires_in = token_info["expires_in"]
+        return jsonify({
+            "accessToken": access_token,
+            "refreshToken": refresh_token,
+            "expiresIn": expires_in,
+        }), 200
+    
+    return jsonify({"error": "Login failed"}), 400
+
+@app.route("/refresh", methods=["POST"])
+@cross_origin()
+def refresh():
+    refresh_token = request.json.get("refreshToken")
+    token_info = sp.auth_manager.get_access_token(refresh_token)
+    
+    if "access_token" in token_info:
+        access_token = token_info["access_token"]
+        expires_in = token_info["expires_in"]
+        return jsonify({"accessToken": access_token, "expiresIn": expires_in}), 200
+    
+    return jsonify({"error": "Refresh failed"}), 400
+
 @app.route('/get_playlist', methods=["POST"])
 @cross_origin()
 def get_playlist():
-    sample = """
-        [
-            {"song": "Life is a Highway", "artist": "Tom Cochrane"},
-            {"song": "On the Road Again", "artist": "Willie Nelson"},
-            {"song": "Born to Run", "artist": "Bruce Springsteen"},
-            {"song": "Sweet Home Alabama", "artist": "Lynyrd Skynyrd"},
-            {"song": "Take Me Home, Country Roads", "artist": "John Denver"},
-            {"song": "Ramble On", "artist": "Led Zeppelin"},
-            {"song": "Go Your Own Way", "artist": "Fleetwood Mac"},
-        ]
-    """
+    sample = """[
+    {"song": "Chicken Fried", "artist": "Zac Brown Band"},
+    {"song": "Dirt Road Anthem", "artist": "Jason Aldean"},
+    {"song": "Country Roads", "artist": "John Denver"},
+    {"song": "Farmers Daughter", "artist": "Rodney Atkins"}
+]"""
     data = request.get_json(silent=True)
     prompt = data.get('prompt')
     count = data.get('count')
-    print(prompt, count)
+
     messages = [
         {"role": "system", "content": """ You are a helpful playlist-generatign assistant. 
-        I will provide you with a text prompt, and based on it, you should generate a list of songs and their artists.
-        You should return a JSON array, where each element follows the following format: {"song": <song_title", "artist": <artist_name>}
+        I will provide you with a text prompt, from which you should generate a list of songs and their artists.
+        You should only respond with a RFC8259 compliant JSON array, where each element has the format: {"song": <song_title", "artist": <artist_name>}.
         """},
-        {"role": "user", "content": "Generate a playlist of 7 songs based on this prompt: 'Songs for the road'"},
+        {"role": "user", "content": "Generate a playlist of 4 songs based on this prompt: 'Food Songs'"},
         {"role": "assistant", "content": sample},
-        {"role": "user", "content": f"Generate a playlist of {count} songs based on this prompt: {prompt}"},
+        {"role": "user", "content": f"Generate a playlist of {count} songs based on this prompt: '{prompt}'"},
     ]
 
     response = openai.ChatCompletion.create(
@@ -59,15 +86,29 @@ def get_playlist():
         max_tokens=400
     )
 
-    playlist = json.loads(response["choices"][0]["message"]["content"])
+    print(response["choices"][0]["message"]["content"].strip())
 
-    for i in range(len(playlist)):
-        artist, song = playlist[i]["artist"], playlist[i]["song"]
-        query = f"{song} {artist}"
-        search_results = sp.search(q=query, type="track", limit=10)
-        playlist[i]["track_id"] = search_results["tracks"]["items"][0]["id"]
-        playlist[i]["image"] = search_results["tracks"]["items"][0]["album"]["images"][0]["url"]
-    return playlist
+    playlist = json.loads(response["choices"][0]["message"]["content"].strip())
+    
+    # Gather search queries for all songs and artists
+    search_queries = [f"{song['song']} {song['artist']}" for song in playlist]
+
+    # Use Spotify's search API to get track details for all search queries at once
+    tracks_info = []
+    for query in search_queries:
+        search_results = sp.search(q=query, type="track", limit=1)
+        if search_results['tracks']['items']:
+            track_info = {
+                "track_id": search_results['tracks']['items'][0]['id'],
+                "image": search_results['tracks']['items'][0]['album']['images'][0]['url']
+            }
+            tracks_info.append(track_info)
+
+    # Combine track details with the playlist data
+    for i, track_info in enumerate(tracks_info):
+        playlist[i].update(track_info)
+
+    return jsonify(playlist)
 
 
 @app.route("/create_playlist", methods=["POST"])
