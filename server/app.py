@@ -3,19 +3,22 @@ from flask_cors import cross_origin, CORS
 import openai
 import spotipy
 
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 import json
 
-config = dotenv_values('.env')
-openai.api_key  = config["OPENAI_API_KEY"]
+import os #provides ways to access the Operating System and allows us to read the environment variables
+
+load_dotenv()
+
+openai.api_key  = os.getenv("OPENAI_API_KEY")
 
 app = Flask(__name__)
 
 sp = spotipy.Spotify(
         auth_manager=spotipy.SpotifyOAuth(
-            client_id=config["SPOTIFY_CLIENT_ID"],
-            client_secret=config["SPOTIFY_CLIENT_SECRET"],
-            redirect_uri=config["SPOTIFY_REDIRECT_URI"],
+            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+            redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
             scope="playlist-modify-private"
         )
     )
