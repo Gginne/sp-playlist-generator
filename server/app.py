@@ -14,19 +14,7 @@ openai.api_key  = os.getenv("OPENAI_API_KEY")
 
 app = Flask(__name__)
 
-sp = spotipy.Spotify(
-        auth_manager=spotipy.SpotifyOAuth(
-            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
-            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-            redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
-            scope="playlist-modify-private"
-        )
-    )
-
-current_user = sp.current_user()
 CORS(app)
-track_ids = []
-assert current_user is not None
 
 @app.route('/login', methods=["POST"])
 @cross_origin()
@@ -97,6 +85,16 @@ def get_playlist():
     search_queries = [f"{song['song']} {song['artist']}" for song in playlist]
 
     # Use Spotify's search API to get track details for all search queries at once
+    sp = spotipy.Spotify(
+        auth_manager=spotipy.SpotifyOAuth(
+            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+            redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
+            scope="playlist-modify-private"
+        )
+    )
+    
+
     tracks_info = []
     for query in search_queries:
         search_results = sp.search(q=query, type="track", limit=1)
