@@ -14,15 +14,24 @@ openai.api_key  = os.getenv("OPENAI_API_KEY")
 
 app = Flask(__name__)
 
+
+
 CORS(app)
 
 @app.route('/login', methods=["POST"])
 @cross_origin()
 def login():
     code = request.json.get("code")
-   
+    sp = spotipy.Spotify(
+    auth_manager=spotipy.SpotifyOAuth(
+        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
+        scope="playlist-modify-private"
+    )
+)
     token_info = sp.auth_manager.get_access_token(code)
-    print(token_info)
+
     if "access_token" in token_info and "refresh_token" in token_info:
         access_token = token_info["access_token"]
         refresh_token = token_info["refresh_token"]
@@ -39,6 +48,14 @@ def login():
 @cross_origin()
 def refresh():
     refresh_token = request.json.get("refreshToken")
+    sp = spotipy.Spotify(
+    auth_manager=spotipy.SpotifyOAuth(
+        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
+        scope="playlist-modify-private"
+    )
+)
     token_info = sp.auth_manager.get_access_token(refresh_token)
     
     if "access_token" in token_info:
@@ -84,17 +101,16 @@ def get_playlist():
     # Gather search queries for all songs and artists
     search_queries = [f"{song['song']} {song['artist']}" for song in playlist]
 
-    # Use Spotify's search API to get track details for all search queries at once
     sp = spotipy.Spotify(
-        auth_manager=spotipy.SpotifyOAuth(
-            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
-            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-            redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
-            scope="playlist-modify-private"
-        )
+    auth_manager=spotipy.SpotifyOAuth(
+        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
+        scope="playlist-modify-private"
     )
-    
+)
 
+    # Use Spotify's search API to get track details for all search queries at once
     tracks_info = []
     for query in search_queries:
         search_results = sp.search(q=query, type="track", limit=1)

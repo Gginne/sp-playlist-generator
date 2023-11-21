@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
 
     if (code) {
       axios
-        .post("http://localhost:5000/login", {
+        .post(`${process.env.REACT_APP_FLASK_API_URL}/login`, {
           code,
         })
         .then((res) => {
@@ -89,7 +89,7 @@ export const AuthProvider = ({ children }) => {
     if (!refreshToken || !expiresIn) return;
     const interval = setInterval(() => {
       axios
-        .post("http://localhost:5000/refresh", {
+        .post(`${process.env.REACT_APP_FLASK_API_URL}/refresh`, {
           refreshToken,
         })
         .then((res) => {

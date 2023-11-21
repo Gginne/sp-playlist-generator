@@ -12,13 +12,13 @@ function App() {
   const [count, setCount] = useState(0);
 
   const { login, logout, accessToken } = useAuth();
-  const getPlaylistRequest = useRequest("https://sp-playlist-generator-production.up.railway.app:6073/get_playlist");
+  const getPlaylistRequest = useRequest(`${process.env.REACT_APP_FLASK_API_URL}/get_playlist`);
 
   // Function to create playlist
   const createPlaylist = async () => {
     try {
       const res = await axios.post(
-        "https://sp-playlist-generator-production.up.railway.app:6073/create_playlist",
+        `${process.env.REACT_APP_FLASK_API_URL}/create_playlist`,
         {
           name,
           tracks: playlist.map((p) => p["track_id"]),
