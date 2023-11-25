@@ -44,7 +44,7 @@ def login():
     oauth_payload = {
     'grant_type': 'authorization_code',
     'code': request.json.get("code"),
-    'redirect_uri': 'http://localhost:3000',
+    'redirect_uri': os.getenv("SPOTIFY_REDIRECT_URI"),
     'client_id': os.getenv("SPOTIFY_CLIENT_ID"),
     'client_secret': os.getenv("SPOTIFY_CLIENT_SECRET")
 }
