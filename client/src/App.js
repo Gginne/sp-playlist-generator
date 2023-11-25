@@ -13,33 +13,32 @@ function App() {
 
   const { login, logout, accessToken } = useAuth();
   const getPlaylistRequest = useRequest(`${process.env.REACT_APP_FLASK_API_URL}/get_playlist`);
+  const createPlaylistRequest = useRequest(
+    `${process.env.REACT_APP_FLASK_API_URL}/create_playlist`
+  );
 
   // Function to create playlist
-  const createPlaylist = async () => {
-    try {
-       await axios.post(
-        `${process.env.REACT_APP_FLASK_API_URL}/create_playlist`,
-        {
-          name,
-          tracks: playlist.map((p) => p["track_id"]),
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      // Add visual feedback for successful playlist creation
-      // Example: Set a success message or change UI accordingly
-    } catch (err) {
-      console.log(err);
-      // Display an error message if playlist creation fails
+  const handleCreatePlaylist = async () => {
+    if (!accessToken) {
+      return;
     }
+
+    createPlaylistRequest.clear()
+    createPlaylistRequest.request({ name, tracks: playlist.map((p) => p["track_id"]) });
+
+    setName("");
+    setPrompt("");
+    setCount(0);
+
+    // Clear playlist
+    getPlaylistRequest.clear();
+   
+    
   };
 
   const handleFetchPlaylist = (e) => {
     e.preventDefault();
+    createPlaylistRequest.clear()
     getPlaylistRequest.clear();
     getPlaylistRequest.request({ prompt, count });
     setName(name);
@@ -105,10 +104,15 @@ function App() {
         </form>
 
         {/* Loading indicator */}
-        {getPlaylistRequest.loading && <Spinner />}
+        {(getPlaylistRequest.loading || createPlaylistRequest.loading) && <Spinner />}
 
+        {/* Error message display for playlist creation */}
+        {createPlaylistRequest.error && <p>{createPlaylistRequest.error}</p>}
         {/* Error message display */}
         {getPlaylistRequest.error && <p>{getPlaylistRequest.error}</p>}
+
+        {/* Success message display */}
+        {createPlaylistRequest.data && <p className="text-emerald-500 text-xl mt-4 text-center">Playlist created successfully!</p>}
 
         {playlist && (
           <>
@@ -119,12 +123,12 @@ function App() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="bg-black px-2 py-3 shadow-sm text-gray-800 rounded-l-md focus:outline-none"
+                  className="bg-black px-2 py-3 shadow-sm text-white placeholder-gray-400 rounded-l-md focus:outline-none"
                   placeholder="Enter Playlist Name"
                 />
                 <button
                   className="bg-emerald-500 text-white px-2 py-3 text-md rounded-r-md hover:bg-emerald-700 focus:outline-none"
-                  onClick={createPlaylist}
+                  onClick={handleCreatePlaylist}
                 >
                   Save Playlist
                 </button>
