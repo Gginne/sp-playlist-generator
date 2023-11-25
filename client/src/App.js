@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import axios from "axios";
 import "./App.css";
 import TrackCard from "./components/TrackCard";
 import { useAuth } from "./context/AuthContext";
