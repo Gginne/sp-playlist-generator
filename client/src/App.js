@@ -17,7 +17,7 @@ function App() {
   // Function to create playlist
   const createPlaylist = async () => {
     try {
-      const res = await axios.post(
+       await axios.post(
         `${process.env.REACT_APP_FLASK_API_URL}/create_playlist`,
         {
           name,
@@ -30,7 +30,6 @@ function App() {
         }
       );
 
-      console.log(res.data);
       // Add visual feedback for successful playlist creation
       // Example: Set a success message or change UI accordingly
     } catch (err) {

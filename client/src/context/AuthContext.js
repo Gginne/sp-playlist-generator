@@ -16,7 +16,7 @@ const getSessionStorage = (key, initialValue) => {
   try {
     const value = window.sessionStorage.getItem(key);
     return value ? JSON.parse(value) : initialValue;
-  } catch (e) {
+  } catch (err) {
     // if error, return initial value
     return initialValue;
   }
@@ -25,8 +25,8 @@ const getSessionStorage = (key, initialValue) => {
 function setSessionStorage(key, value) {
   try {
     window.sessionStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.log(e);
+  } catch (err) {
+    console.log(err);
   }
 }
 
@@ -74,8 +74,11 @@ export const AuthProvider = ({ children }) => {
           code,
         })
         .then((res) => {
-          console.log(res)
-          
+
+          setAccessToken(res.data.accessToken);
+          setRefreshToken(res.data.refreshToken);
+          setExpiresIn(res.data.expiresIn);
+  
           setSessionStorage("access_token", res.data.accessToken);
           setSessionStorage("refresh_token", res.data.refreshToken);
           setSessionStorage("expires_in", Number(res.data.expiresIn));
