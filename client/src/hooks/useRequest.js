@@ -25,7 +25,7 @@ export default function useRequest(endpoint) {
       } finally {
         setLoading(false)
       }
-    }, [endpoint]);
+    }, [endpoint, accessToken]);
 
     const clear = useCallback(() => {
       setData(null)
