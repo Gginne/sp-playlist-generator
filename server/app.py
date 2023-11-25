@@ -3,6 +3,8 @@ from flask_cors import cross_origin, CORS
 import openai
 import spotipy
 
+import requests
+import base64
 from dotenv import load_dotenv
 import json
 
@@ -12,56 +14,86 @@ load_dotenv()
 
 openai.api_key  = os.getenv("OPENAI_API_KEY")
 
+client_id = os.getenv("SPOTIFY_CLIENT_ID")
+client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
+
+client_credentials = f"{client_id}:{client_secret}"
+base64_credentials = base64.b64encode(client_credentials.encode()).decode()
+auth_url = 'https://accounts.spotify.com/api/token'
+auth_headers = {
+    'Authorization': f'Basic {base64_credentials}'
+}
+auth_data = {
+    'grant_type': 'client_credentials'
+}
+response = requests.post(auth_url, headers=auth_headers, data=auth_data)
+if response.status_code == 200:
+    token = response.json().get('access_token')
+    sp = spotipy.Spotify(auth=token)
+else:
+    print('Failed to retrieve token')
+
 app = Flask(__name__)
 
-
-
 CORS(app)
+
 
 @app.route('/login', methods=["POST"])
 @cross_origin()
 def login():
-    code = request.json.get("code")
-    sp = spotipy.Spotify(
-    auth_manager=spotipy.SpotifyOAuth(
-        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
-        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
-        scope="playlist-modify-private"
-    )
-)
-    token_info = sp.auth_manager.get_access_token(code)
+    oauth_payload = {
+    'grant_type': 'authorization_code',
+    'code': request.json.get("code"),
+    'redirect_uri': 'http://localhost:3000',
+    'client_id': os.getenv("SPOTIFY_CLIENT_ID"),
+    'client_secret': os.getenv("SPOTIFY_CLIENT_SECRET")
+}
 
-    if "access_token" in token_info and "refresh_token" in token_info:
-        access_token = token_info["access_token"]
-        refresh_token = token_info["refresh_token"]
-        expires_in = token_info["expires_in"]
+    response = requests.post('https://accounts.spotify.com/api/token', data=oauth_payload)
+
+    if response.status_code == 200:
+    
+        token_info = response.json()
+        access_token = token_info['access_token']
+        token_type = token_info['token_type']
+        expires_in = token_info['expires_in']
+        
         return jsonify({
             "accessToken": access_token,
-            "refreshToken": refresh_token,
-            "expiresIn": expires_in,
+            "tokenType": token_type,
+            "expiresIn": expires_in
         }), 200
-    
-    return jsonify({"error": "Login failed"}), 400
+  
+    return jsonify({"error": response.json()}), 400
 
 @app.route("/refresh", methods=["POST"])
 @cross_origin()
 def refresh():
-    refresh_token = request.json.get("refreshToken")
-    sp = spotipy.Spotify(
-    auth_manager=spotipy.SpotifyOAuth(
-        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
-        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
-        scope="playlist-modify-private"
-    )
-)
-    token_info = sp.auth_manager.get_access_token(refresh_token)
     
-    if "access_token" in token_info:
-        access_token = token_info["access_token"]
-        expires_in = token_info["expires_in"]
-        return jsonify({"accessToken": access_token, "expiresIn": expires_in}), 200
+
+    if not refresh_token:
+        return jsonify({"error": "Refresh token is required"}), 400
+    
+    refresh_token = request.json.get("refreshToken")
+
+    payload = {
+        'refresh_token': refresh_token,
+    }
+
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    response = requests.post('https://example.com/v1/refresh', data=payload, headers=headers)
+
+    if response.status_code == 200:
+        # Handle successful response here
+        token_info = response.json()
+        
+        if "access_token" in token_info:
+            access_token = token_info["access_token"]
+            expires_in = token_info["expires_in"]
+            return jsonify({"accessToken": access_token, "expiresIn": expires_in}), 200
     
     return jsonify({"error": "Refresh failed"}), 400
 
@@ -101,16 +133,8 @@ def get_playlist():
     # Gather search queries for all songs and artists
     search_queries = [f"{song['song']} {song['artist']}" for song in playlist]
 
-    sp = spotipy.Spotify(
-    auth_manager=spotipy.SpotifyOAuth(
-        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
-        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
-        scope="playlist-modify-private"
-    )
-)
-
     # Use Spotify's search API to get track details for all search queries at once
+
     tracks_info = []
     for query in search_queries:
         search_results = sp.search(q=query, type="track", limit=1)
@@ -152,4 +176,4 @@ def create_playlist():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=os.getenv("PORT", default=5000))
+    app.run(debug=True)

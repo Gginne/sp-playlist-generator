@@ -74,12 +74,16 @@ export const AuthProvider = ({ children }) => {
           code,
         })
         .then((res) => {
-          setAccessToken(res.data.accessToken);
-          setRefreshToken(res.data.refreshToken);
-          setExpiresIn(Number(res.data.expiresIn));
+          console.log(res)
+          
+          setSessionStorage("access_token", res.data.accessToken);
+          setSessionStorage("refresh_token", res.data.refreshToken);
+          setSessionStorage("expires_in", Number(res.data.expiresIn));
+     
           window.history.pushState({}, null, "/");
         })
-        .catch(() => {
+        .catch((err) => {
+          console.log(err)
           window.location = "/";
         });
     }
@@ -95,6 +99,8 @@ export const AuthProvider = ({ children }) => {
         .then((res) => {
           setAccessToken(res.data.accessToken);
           setExpiresIn(res.data.expiresIn);
+          setSessionStorage("access_token", res.data.accessToken);
+          setSessionStorage("expires_in", Number(res.data.expiresIn));
         })
         .catch(() => {
           window.location = "/";
